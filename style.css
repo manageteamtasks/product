@@ -1,0 +1,408 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #fff;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+    min-height: 100vh;
+    /* Optional: add a subtle pattern overlay */
+    position: relative;
+}
+
+body::before {
+    content: none;
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    background: #f5f7ff;
+    padding: 20px 0;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px 0 rgba(80, 110, 255, 0.07);
+}
+
+h1 {
+    color: #2a2a2a;
+    text-align: center;
+}
+
+#task-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+#task-form input, #task-form select {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+#task-form button {
+    padding: 10px 20px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#task-form button:hover {
+    background-color: #0056b3;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 10px;
+    background: #fffbe6;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    border: 1px solid #f3e9c7;
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-item .details {
+    flex-grow: 1;
+}
+
+.task-item .task-name {
+    font-weight: bold;
+}
+
+.task-item .task-assigned {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.task-item .task-status {
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    background-color: #eee;
+    color: #333;
+    min-width: 80px;
+    text-align: center;
+}
+
+.task-item .actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 48px;
+    gap: 0;
+}
+
+.task-item .actions button.edit-btn {
+    align-self: flex-end;
+    margin-bottom: auto;
+}
+
+.task-item .actions button.delete-btn {
+    align-self: flex-end;
+    margin-top: auto;
+    width: 16px;
+    height: 16px;
+    padding: 1px;
+}
+
+.task-item .actions button.edit-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.task-item .actions button.delete-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.task-item .actions button.delete-btn:hover {
+    background: #ffeaea;
+    color: #fff;
+}
+
+.task-item .actions svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+}
+
+.task-lanes {
+    display: flex;
+    gap: 22px;
+    margin-top: 30px;
+    justify-content: space-between;
+    max-width: 1300px;
+    width: 100%;
+    overflow-x: auto;
+    padding: 0 16px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.lane {
+    flex: 1 1 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px;
+    min-width: 200px;
+    box-shadow: 0 1px 6px rgba(80,110,255,0.06);
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+    border: 1px solid #d1dbfa;
+}
+
+.lane h2 {
+    text-align: center;
+    font-size: 1.1em;
+    margin: 0 0 10px 0;
+    color: #007bff;
+}
+
+.lane-tasks {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 40px;
+}
+
+@media (max-width: 900px) {
+    .task-lanes {
+        flex-direction: column;
+        gap: 24px;
+        width: 100%;
+        padding: 0;
+    }
+    .lane {
+        max-height: none;
+        min-width: 0;
+    }
+}
+
+.main-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 110px;
+    padding-top: 32px;
+    padding-bottom: 32px;
+    width: 100%;
+    background: linear-gradient(90deg, #6a8dff 0%, #b8c6ff 100%);
+    box-shadow: 0 2px 12px 0 rgba(80, 110, 255, 0.07);
+    margin-bottom: 24px;
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
+}
+
+.main-header h1 {
+    color: #fff;
+    text-align: center;
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin: 0 auto;
+    text-shadow: 0 2px 8px rgba(80,110,255,0.10);
+    flex: 0 1 auto;
+    z-index: 2;
+}
+
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 0 18px;
+}
+
+.filter-bar label {
+    font-weight: 500;
+    color: #3a3a3a;
+}
+
+.filter-bar select {
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid #b8c6ff;
+    font-size: 1rem;
+    background: #fff;
+    color: #333;
+}
+
+.login-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.login-modal-content {
+    background: #f5f7ff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px 0 rgba(80, 110, 255, 0.07);
+    padding: 32px 24px 24px 24px;
+    text-align: center;
+    min-width: 320px;
+}
+
+.login-modal-content h2 {
+    margin-bottom: 18px;
+    color: #6a8dff;
+}
+
+#login-form input {
+    width: 90%;
+    margin-bottom: 14px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #b8c6ff;
+    font-size: 1rem;
+}
+
+#login-form button {
+    width: 100%;
+    padding: 10px;
+    background: #6a8dff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.login-error {
+    color: #dc3545;
+    margin-top: 10px;
+    min-height: 20px;
+}
+
+.logout-dropdown, .logout-dropdown::before { display: none !important; }
+
+.logout-btn {
+    width: 100px;
+    background: #fff;
+    color: #6a8dff;
+    border: 1px solid #b8c6ff;
+    border-radius: 6px;
+    padding: 6px 0;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, color 0.15s;
+    margin-top: 6px;
+    box-shadow: 0 2px 8px 0 rgba(80, 110, 255, 0.07);
+}
+.logout-btn:hover {
+    background: #f5f7ff;
+    color: #dc3545;
+}
+.user-info {
+    position: relative;
+    right: 0;
+    margin-left: auto;
+    background: #fff;
+    color: #6a8dff;
+    border: 1px solid #b8c6ff;
+    border-radius: 20px;
+    padding: 4px 18px 4px 32px;
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    z-index: 10;
+    box-shadow: 0 2px 8px 0 rgba(80, 110, 255, 0.07);
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    white-space: nowrap;
+}
+.user-info .user-icon {
+    display: inline-block;
+    margin-right: 8px;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+}
+
+.body-blur .container,
+.body-blur .main-header,
+.body-blur .filter-bar {
+    filter: blur(3px) grayscale(0.2) brightness(0.8);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.5;
+}
+
+.change-password-btn {
+    width: 140px;
+    background: #fff;
+    color: #6a8dff;
+    border: 1px solid #b8c6ff;
+    border-radius: 6px;
+    padding: 6px 0;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, color 0.15s;
+    box-shadow: 0 2px 8px 0 rgba(80, 110, 255, 0.07);
+}
+.change-password-btn:hover {
+    background: #f5f7ff;
+    color: #6a8dff;
+}
+#change-password-modal .login-modal-content {
+    min-width: 320px;
+}
+#close-change-password {
+    background: #fff;
+    color: #6a8dff;
+    border: 1px solid #b8c6ff;
+    border-radius: 6px;
+    padding: 6px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.15s, color 0.15s;
+}
+#close-change-password:hover {
+    background: #f5f7ff;
+    color: #dc3545;
+}
+
+.user-block {
+    position: absolute;
+    top: 16px;
+    right: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    z-index: 12;
+}
+
+.task-monthyear {
+    font-size: 0.6em;
+    color: #888;
+    margin-top: 2px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+} 
