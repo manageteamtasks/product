@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const assignedInput = document.getElementById('assigned-input');
     const statusInput = document.getElementById('status-input');
     const assignedFilter = document.getElementById('assigned-filter');
+    const monthYearFilter = document.getElementById('month-year-filter');
     const loginModal = document.getElementById('login-modal');
     const loginForm = document.getElementById('login-form');
     const loginError = document.getElementById('login-error');
@@ -16,8 +17,91 @@ document.addEventListener('DOMContentLoaded', () => {
     const changePasswordForm = document.getElementById('change-password-form');
     const changePasswordError = document.getElementById('change-password-error');
     const closeChangePassword = document.getElementById('close-change-password');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    const userMenuDropdown = document.getElementById('user-menu-dropdown');
+    const userMenuText = document.getElementById('user-menu-text');
     let allTasks = [];
     let currentFilter = '';
+    let currentMonthYearFilter = '';
+
+    // Helper function to normalize month-year values for comparison
+    function normalizeMonthYear(monthYearValue) {
+        if (!monthYearValue) return '';
+        
+        if (monthYearValue.includes('/')) {
+            // Excel format: DD/MM/YYYY -> YYYY-MM
+            const parts = monthYearValue.split('/');
+            if (parts.length === 3) {
+                const month = parts[1];
+                const year = parts[2];
+                return `${year}-${month.padStart(2, '0')}`;
+            }
+        } else if (monthYearValue.includes('T') && monthYearValue.includes('Z')) {
+            // ISO date format: 2025-01-04T18:30:00.000Z -> YYYY-MM
+            const date = new Date(monthYearValue);
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            return `${year}-${month}`;
+        } else if (monthYearValue.includes('-')) {
+            // Already in YYYY-MM format
+            return monthYearValue;
+        }
+        
+        return '';
+    }
+
+    // Function to populate month-year filter options
+    function populateMonthYearFilter(tasks) {
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        
+        // Get current month and year
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+        const currentMonthYear = `${currentYear}-${currentMonth}`;
+        
+        // Get unique month-year combinations from tasks
+        const uniqueMonthYears = new Set();
+        tasks.forEach(task => {
+            const normalized = normalizeMonthYear(task.MonthYear);
+            if (normalized) {
+                uniqueMonthYears.add(normalized);
+            }
+        });
+        
+        // Clear existing options except "All"
+        const monthYearFilter = document.getElementById('month-year-filter');
+        monthYearFilter.innerHTML = '<option value="">All</option>';
+        
+        // Add options for each unique month-year
+        Array.from(uniqueMonthYears).sort().forEach(monthYear => {
+            const [year, month] = monthYear.split('-');
+            const monthName = monthNames[parseInt(month) - 1];
+            const option = document.createElement('option');
+            option.value = monthYear;
+            option.textContent = `${monthName} ${year}`;
+            monthYearFilter.appendChild(option);
+        });
+        
+        // Set current month as default if it exists in the options
+        if (uniqueMonthYears.has(currentMonthYear)) {
+            monthYearFilter.value = currentMonthYear;
+            currentMonthYearFilter = currentMonthYear;
+        }
+    }
+
+    // Function to set default month-year value
+    function setDefaultMonthYear() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+        const currentMonthYear = `${currentYear}-${currentMonth}`;
+        document.getElementById('month-year-input').value = currentMonthYear;
+    }
 
     // --- Kanban Logic ---
     assignedFilter.addEventListener('change', () => {
@@ -25,24 +109,86 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTasks(allTasks);
     });
 
+    monthYearFilter.addEventListener('change', () => {
+        currentMonthYearFilter = monthYearFilter.value;
+        renderTasks(allTasks);
+    });
+
+    // Refresh button functionality
+    const refreshBtn = document.getElementById('refresh-btn');
+    refreshBtn.addEventListener('click', async () => {
+        // Add visual feedback
+        refreshBtn.style.transform = 'rotate(360deg)';
+        refreshBtn.style.transition = 'transform 0.5s ease';
+        
+        try {
+            // Add cache-busting parameter to force fresh data
+            const timestamp = new Date().getTime();
+            const response = await fetch(`${API_URL}?t=${timestamp}`);
+            if (!response.ok) throw new Error('Failed to fetch tasks');
+            const tasks = await response.json();
+            allTasks = tasks;
+            renderTasks(tasks);
+        } catch (error) {
+            console.error('Error refreshing tasks:', error);
+        } finally {
+            // Reset button animation
+            setTimeout(() => {
+                refreshBtn.style.transform = 'rotate(0deg)';
+            }, 500);
+        }
+    });
+
+    // Cancel edit functionality
+    cancelEditBtn.addEventListener('click', () => {
+        taskForm.reset();
+        setDefaultMonthYear();
+        taskForm.removeAttribute('data-edit-id');
+        taskForm.querySelector('button[type="submit"]').textContent = 'Add';
+        cancelEditBtn.style.display = 'none';
+    });
+
     taskForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const editId = taskForm.getAttribute('data-edit-id');
+        
+        // Ensure assigned input is set for non-admin users
+        if (loggedInRole !== 'admin' && assignedInput) {
+            assignedInput.value = loggedInUser;
+        }
+        
+        // Convert month-year input to Excel-friendly format
+        const monthYearInput = document.getElementById('month-year-input').value;
+        let excelMonthYear = monthYearInput;
+        if (monthYearInput) {
+            // Convert YYYY-MM to DD/MM/YYYY format for Excel
+            const [year, month] = monthYearInput.split('-');
+            if (year && month) {
+                excelMonthYear = `05/${month}/${year}`;
+            }
+        }
+        
         const taskData = {
             ID: editId ? editId : `task-${new Date().getTime()}`,
             Task: taskInput.value,
             Assigned: assignedInput.value,
             Status: statusInput.value,
-            MonthYear: document.getElementById('month-year-input').value
+            MonthYear: excelMonthYear
         };
         if (editId) {
             await handlePostRequest('updateTask', taskData);
             taskForm.removeAttribute('data-edit-id');
-            taskForm.querySelector('button[type="submit"]').textContent = 'Add Task';
+            taskForm.querySelector('button[type="submit"]').textContent = 'Add';
+            cancelEditBtn.style.display = 'none';
         } else {
             await handlePostRequest('addTask', taskData);
         }
         taskForm.reset();
+        setDefaultMonthYear();
+        // Reset assigned input for non-admin users after form reset
+        if (loggedInRole !== 'admin' && assignedInput) {
+            assignedInput.value = loggedInUser;
+        }
         fetchTasks();
     });
 
@@ -52,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to fetch tasks');
             const tasks = await response.json();
             allTasks = tasks;
+            populateMonthYearFilter(tasks);
             renderTasks(tasks);
         } catch (error) {
             console.error('Error fetching tasks:', error);
@@ -64,6 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentFilter) {
             filtered = tasks.filter(task => (task.Assigned || '') === currentFilter);
         }
+        if (currentMonthYearFilter) {
+            filtered = filtered.filter(task => normalizeMonthYear(task.MonthYear) === currentMonthYearFilter);
+        }
         document.getElementById('lane-todo').innerHTML = '';
         document.getElementById('lane-inprogress').innerHTML = '';
         document.getElementById('lane-review').innerHTML = '';
@@ -74,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const cardColors = [
-            '#fffbe6', '#e6fff9', '#e6f0ff', '#f3e6ff', '#ffe6f2', '#e6ffe6', '#fff0e6'
+            '#faf0e6', '#fff8dc', '#f5f5dc', '#ffe4e1', '#e6e6fa', '#fdf5e6', '#fffacd'
         ];
         const loggedInUser = localStorage.getItem('loggedInUser');
         const loggedInRole = localStorage.getItem('loggedInRole');
@@ -85,11 +235,31 @@ document.addEventListener('DOMContentLoaded', () => {
             taskItem.style.background = color;
             let monthYearDisplay = '';
             if (task.MonthYear) {
-                const [year, month] = task.MonthYear.split('-');
+                // Handle both YYYY-MM format and Excel DD/MM/YYYY format
+                let year, month;
+                if (task.MonthYear.includes('/')) {
+                    // Excel format: DD/MM/YYYY
+                    const parts = task.MonthYear.split('/');
+                    if (parts.length === 3) {
+                        month = parseInt(parts[1], 10);
+                        year = parseInt(parts[2], 10);
+                    }
+                } else if (task.MonthYear.includes('-')) {
+                    // Original format: YYYY-MM
+                    const [yearStr, monthStr] = task.MonthYear.split('-');
+                    year = parseInt(yearStr, 10);
+                    month = parseInt(monthStr, 10);
+                }
+                
                 if (year && month) {
-                    const date = new Date(year, month - 1);
-                    const monthName = date.toLocaleString('default', { month: 'long' });
-                    monthYearDisplay = `${monthName} ${year.slice(-2)}`;
+                    // Use month names array to avoid timezone issues completely
+                    const monthNames = [
+                        'January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'
+                    ];
+                    const monthName = monthNames[month - 1];
+                    const yearDisplay = year.toString().slice(-2);
+                    monthYearDisplay = `${monthName} ${yearDisplay}`;
                 }
             }
             taskItem.innerHTML = `
@@ -125,11 +295,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 const task = filtered.find(t => t.ID === taskId);
                 if (task) {
                     taskInput.value = task.Task;
-                    assignedInput.value = task.Assigned;
+                    
+                    // Set assigned input based on user role
+                    if (loggedInRole === 'admin') {
+                        assignedInput.value = task.Assigned;
+                    } else {
+                        assignedInput.value = loggedInUser;
+                    }
+                    
                     statusInput.value = task.Status;
-                    document.getElementById('month-year-input').value = task.MonthYear || '';
+                    
+                    // Convert Excel date format back to YYYY-MM for the input field
+                    let monthYearValue = task.MonthYear || '';
+                    
+                    if (monthYearValue.includes('/')) {
+                        // Excel format: DD/MM/YYYY -> YYYY-MM
+                        const parts = monthYearValue.split('/');
+                        if (parts.length === 3) {
+                            const day = parts[0];
+                            const month = parts[1];
+                            const year = parts[2];
+                            monthYearValue = `${year}-${month.padStart(2, '0')}`;
+                        }
+                    } else if (monthYearValue.includes('T') && monthYearValue.includes('Z')) {
+                        // ISO date format: 2025-01-04T18:30:00.000Z -> YYYY-MM
+                        const date = new Date(monthYearValue);
+                        const year = date.getFullYear();
+                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                        monthYearValue = `${year}-${month}`;
+                    }
+                    
+                    document.getElementById('month-year-input').value = monthYearValue;
+                    
                     taskForm.setAttribute('data-edit-id', task.ID);
-                    taskForm.querySelector('button[type="submit"]').textContent = 'Update Task';
+                    taskForm.querySelector('button[type="submit"]').textContent = 'Update';
+                    cancelEditBtn.style.display = 'inline-block';
                 }
             });
         });
@@ -169,18 +369,119 @@ document.addEventListener('DOMContentLoaded', () => {
     function showLogin(user) {
         if (user) {
             loginModal.style.display = 'none';
-            userInfo.innerHTML = `<span class="user-icon">\
-                <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#6a8dff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='4'/><path d='M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4'/></svg>\
-            </span> <b>${user}</b>`;
-            logoutBtn.style.display = 'block';
-            changePasswordBtn && (changePasswordBtn.style.display = 'block');
+            userMenuText.textContent = user;
+            userMenuBtn.style.display = 'flex';
+            
+            // Enable/disable month-year filter based on user role
+            const monthYearFilter = document.getElementById('month-year-filter');
+            const monthYearFilterLabel = document.querySelector('label[for="month-year-filter"]');
+            const monthYearInput = document.getElementById('month-year-input');
+            const assignedFilter = document.getElementById('assigned-filter');
+            const assignedFilterLabel = document.querySelector('label[for="assigned-filter"]');
+            const assignedInput = document.getElementById('assigned-input');
+            const statusInput = document.getElementById('status-input');
+            
+            if (loggedInRole === 'admin') {
+                if (monthYearFilter) {
+                    monthYearFilter.style.display = 'block';
+                    monthYearFilter.disabled = false;
+                    monthYearFilter.style.opacity = '1';
+                    monthYearFilter.style.cursor = 'pointer';
+                    monthYearFilter.title = 'Filter by month and year';
+                }
+                if (monthYearFilterLabel) {
+                    monthYearFilterLabel.style.display = 'block';
+                }
+                if (monthYearInput) {
+                    monthYearInput.style.display = 'block';
+                    monthYearInput.disabled = false;
+                }
+                if (assignedFilter) {
+                    assignedFilter.style.display = 'block';
+                    assignedFilter.disabled = false;
+                    assignedFilter.style.opacity = '1';
+                    assignedFilter.style.cursor = 'pointer';
+                }
+                if (assignedFilterLabel) {
+                    assignedFilterLabel.style.display = 'block';
+                }
+                if (assignedInput) {
+                    assignedInput.style.display = 'block';
+                    assignedInput.disabled = false;
+                }
+                // Show "Done" option for admin users
+                if (statusInput) {
+                    const doneOption = statusInput.querySelector('option[value="Done"]');
+                    if (doneOption) {
+                        doneOption.style.display = 'block';
+                    }
+                }
+            } else {
+                if (monthYearFilter) {
+                    monthYearFilter.style.display = 'none';
+                    monthYearFilter.disabled = true;
+                    monthYearFilter.style.opacity = '0.5';
+                    monthYearFilter.style.cursor = 'not-allowed';
+                    monthYearFilter.title = 'Month filter - Admin only';
+                    // Reset to current month for non-admin users
+                    const now = new Date();
+                    const currentYear = now.getFullYear();
+                    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+                    const currentMonthYear = `${currentYear}-${currentMonth}`;
+                    monthYearFilter.value = currentMonthYear;
+                    currentMonthYearFilter = currentMonthYear;
+                }
+                if (monthYearFilterLabel) {
+                    monthYearFilterLabel.style.display = 'none';
+                }
+                if (monthYearInput) {
+                    monthYearInput.style.display = 'none';
+                    monthYearInput.disabled = true;
+                    // Set to current month for non-admin users
+                    const now = new Date();
+                    const currentYear = now.getFullYear();
+                    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+                    const currentMonthYear = `${currentYear}-${currentMonth}`;
+                    monthYearInput.value = currentMonthYear;
+                }
+                if (assignedFilter) {
+                    assignedFilter.style.display = 'none';
+                    assignedFilter.disabled = true;
+                    assignedFilter.style.opacity = '0.5';
+                    assignedFilter.style.cursor = 'not-allowed';
+                    // Set assigned filter to current user's name
+                    assignedFilter.value = user;
+                    currentFilter = user;
+                }
+                if (assignedFilterLabel) {
+                    assignedFilterLabel.style.display = 'none';
+                }
+                if (assignedInput) {
+                    assignedInput.style.display = 'none';
+                    assignedInput.disabled = true;
+                    // Set assigned input to current user's name
+                    assignedInput.value = user;
+                }
+                // Hide "Done" option for non-admin users
+                if (statusInput) {
+                    const doneOption = statusInput.querySelector('option[value="Done"]');
+                    if (doneOption) {
+                        doneOption.style.display = 'none';
+                    }
+                    // If current status is "Done", change it to "To Do"
+                    if (statusInput.value === 'Done') {
+                        statusInput.value = 'To Do';
+                    }
+                }
+            }
+            
             document.body.classList.remove('body-blur');
             fetchTasks();
         } else {
             loginModal.style.display = 'flex';
-            userInfo.textContent = '';
-            logoutBtn.style.display = 'none';
-            changePasswordBtn && (changePasswordBtn.style.display = 'none');
+            userMenuText.textContent = '';
+            userMenuBtn.style.display = 'none';
+            userMenuDropdown.classList.remove('show');
             document.body.classList.add('body-blur');
         }
     }
@@ -189,28 +490,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let loggedInRole = localStorage.getItem('loggedInRole');
     showLogin(loggedInUser);
 
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const user = document.getElementById('login-user').value;
-        const password = document.getElementById('login-password').value;
-        loginError.textContent = '';
-        try {
-            const response = await fetch(`${API_URL}?action=login`, {
-                method: 'POST',
-                body: JSON.stringify({ user, password }),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-            const result = await response.json();
-            if (result.status === 'success') {
-                localStorage.setItem('loggedInUser', user);
-                localStorage.setItem('loggedInRole', result.data.role || '');
-                loggedInRole = result.data.role || '';
-                showLogin(user);
-            } else {
-                loginError.textContent = 'Invalid username or password';
-            }
-        } catch (err) {
-            loginError.textContent = 'Login failed. Please try again.';
+    // Set default month-year value on page load
+    setDefaultMonthYear();
+
+    // User menu functionality
+    userMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userMenuDropdown.classList.toggle('show');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!userMenuBtn.contains(e.target) && !userMenuDropdown.contains(e.target)) {
+            userMenuDropdown.classList.remove('show');
+        }
+    });
+
+    // Close menu when pressing Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            userMenuDropdown.classList.remove('show');
         }
     });
 
@@ -218,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('loggedInUser');
         localStorage.removeItem('loggedInRole');
         loggedInRole = '';
+        userMenuDropdown.classList.remove('show');
         showLogin(null);
     });
 
@@ -226,6 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
         changePasswordModal.style.display = 'flex';
         changePasswordError.textContent = '';
         document.getElementById('new-password').value = '';
+        userMenuDropdown.classList.remove('show');
     });
     closeChangePassword.addEventListener('click', () => {
         changePasswordModal.style.display = 'none';
@@ -252,4 +553,29 @@ document.addEventListener('DOMContentLoaded', () => {
             changePasswordError.textContent = 'Error updating password.';
         }
     });
-}); 
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const user = document.getElementById('login-user').value;
+        const password = document.getElementById('login-password').value;
+        loginError.textContent = '';
+        try {
+            const response = await fetch(`${API_URL}?action=login`, {
+                method: 'POST',
+                body: JSON.stringify({ user, password }),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                localStorage.setItem('loggedInUser', user);
+                localStorage.setItem('loggedInRole', result.data.role || '');
+                loggedInRole = result.data.role || '';
+                showLogin(user);
+            } else {
+                loginError.textContent = 'Invalid username or password';
+            }
+        } catch (err) {
+            loginError.textContent = 'Login failed. Please try again.';
+        }
+    });
+});

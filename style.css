@@ -16,11 +16,10 @@ body::before {
 .container {
     position: relative;
     z-index: 1;
-    max-width: 1400px;
-    width: 100%;
-    margin: 0 auto;
+    width: calc(100% - 32px);
+    margin: 0 16px;
     background: #f5f7ff;
-    padding: 20px 0;
+    padding: 6px 0 20px 0;
     border-radius: 18px;
     box-shadow: 0 4px 24px 0 rgba(80, 110, 255, 0.07);
 }
@@ -32,30 +31,66 @@ h1 {
 
 #task-form {
     display: flex;
+    align-items: center;
     gap: 10px;
     margin-bottom: 20px;
 }
 
 #task-form input, #task-form select {
-    flex-grow: 1;
     padding: 10px;
+    margin: 5px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+#task-form input::placeholder {
+    color: #ccc;
+    opacity: 1;
+}
+
+#task-form textarea {
+    resize: vertical;
+    min-height: 40px;
+    font-family: inherit;
+    width: 100%;
+    min-width: 300px;
 }
 
 #task-form button {
-    padding: 10px 20px;
-    border: none;
-    background-color: #007bff;
+    background: linear-gradient(135deg, #8e7bff 0%, #7169e0 100%);
     color: white;
+    border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
+    padding: 4px 16px;
+    height: 42px;
+    transition: all 0.2s ease;
 }
 
 #task-form button:hover {
-    background-color: #0056b3;
+    background: linear-gradient(135deg, #7a6bff 0%, #5f58d0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(142, 123, 255, 0.3);
+}
+
+#cancel-edit-btn {
+    padding: 4px 16px;
+    border: 1px solid #dc3545;
+    background-color: #fff;
+    color: #dc3545;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    height: 42px;
+    margin-left: 10px;
+}
+
+#cancel-edit-btn:hover {
+    background-color: #dc3545;
+    color: white;
 }
 
 .task-item {
@@ -104,35 +139,83 @@ h1 {
     align-items: flex-end;
     justify-content: space-between;
     height: 48px;
-    gap: 0;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.task-item:hover .actions {
+    opacity: 1;
 }
 
 .task-item .actions button.edit-btn {
     align-self: flex-end;
     margin-bottom: auto;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+}
+
+.task-item .actions button.edit-btn:hover {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #2196f3;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
 }
 
 .task-item .actions button.delete-btn {
     align-self: flex-end;
     margin-top: auto;
-    width: 16px;
-    height: 16px;
-    padding: 1px;
-}
-
-.task-item .actions button.edit-btn svg {
-    width: 12px;
-    height: 12px;
-}
-
-.task-item .actions button.delete-btn svg {
-    width: 12px;
-    height: 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
 }
 
 .task-item .actions button.delete-btn:hover {
-    background: #ffeaea;
-    color: #fff;
+    background: #ffebee;
+    border-color: #f44336;
+    color: #f44336;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
+}
+
+.task-item .actions button.edit-btn svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+}
+
+.task-item .actions button.delete-btn svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+}
+
+.task-item .actions button.edit-btn:hover svg {
+    transform: scale(1.1);
+}
+
+.task-item .actions button.delete-btn:hover svg {
+    transform: scale(1.1);
 }
 
 .task-item .actions svg {
@@ -144,13 +227,12 @@ h1 {
 
 .task-lanes {
     display: flex;
-    gap: 22px;
+    gap: 10px;
     margin-top: 30px;
     justify-content: space-between;
-    max-width: 1300px;
     width: 100%;
     overflow-x: auto;
-    padding: 0 16px;
+    padding: 0;
     margin-left: auto;
     margin-right: auto;
 }
@@ -170,9 +252,87 @@ h1 {
 
 .lane h2 {
     text-align: center;
-    font-size: 1.1em;
-    margin: 0 0 10px 0;
+    font-size: 0.85em;
+    margin: 0 0 8px 0;
     color: #007bff;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 8px 6px;
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+    border-radius: 6px;
+    border: 1px solid #d1dbfa;
+    box-shadow: 0 1px 3px rgba(80, 110, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.lane h2::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #007bff, #6a8dff, #007bff);
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Custom colors for each status */
+.lane[data-status="To Do"] h2 {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-color: #ced4da;
+    color: #6c757d;
+}
+
+.lane[data-status="To Do"] h2::before {
+    background: linear-gradient(90deg, #6c757d, #adb5bd, #6c757d);
+}
+
+.lane[data-status="In Progress"] h2 {
+    background: linear-gradient(135deg, #fff8e6 0%, #ffe8c6 100%);
+    border-color: #ffd8a8;
+    color: #fd7e14;
+}
+
+.lane[data-status="In Progress"] h2::before {
+    background: linear-gradient(90deg, #fd7e14, #ffa726, #fd7e14);
+}
+
+.lane[data-status="Review"] h2 {
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+    border-color: #b3d9ff;
+    color: #17a2b8;
+}
+
+.lane[data-status="Review"] h2::before {
+    background: linear-gradient(90deg, #17a2b8, #4fc3f7, #17a2b8);
+}
+
+.lane[data-status="Hold"] h2 {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+    border-color: #ffd1d1;
+    color: #dc3545;
+}
+
+.lane[data-status="Hold"] h2::before {
+    background: linear-gradient(90deg, #dc3545, #ff6b6b, #dc3545);
+}
+
+.lane[data-status="Done"] h2 {
+    background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%);
+    border-color: #b8e6b8;
+    color: #28a745;
+}
+
+.lane[data-status="Done"] h2::before {
+    background: linear-gradient(90deg, #28a745, #66bb6a, #28a745);
 }
 
 .lane-tasks {
@@ -195,31 +355,25 @@ h1 {
 }
 
 .main-header {
+    background: linear-gradient(135deg, #8e7bff 0%, #7169e0 100%);
+    color: white;
+    padding: 25px 0;
+    text-align: center;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 110px;
-    padding-top: 32px;
-    padding-bottom: 32px;
-    width: 100%;
-    background: linear-gradient(90deg, #6a8dff 0%, #b8c6ff 100%);
-    box-shadow: 0 2px 12px 0 rgba(80, 110, 255, 0.07);
-    margin-bottom: 24px;
-    border-bottom-left-radius: 24px;
-    border-bottom-right-radius: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+    border-radius: 12px;
+    margin-left: 16px;
+    margin-right: 16px;
 }
 
 .main-header h1 {
-    color: #fff;
-    text-align: center;
-    font-size: 2.4rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    margin: 0 auto;
-    text-shadow: 0 2px 8px rgba(80,110,255,0.10);
-    flex: 0 1 auto;
-    z-index: 2;
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    color: white;
 }
 
 .filter-bar {
@@ -227,21 +381,55 @@ h1 {
     align-items: center;
     gap: 12px;
     margin-bottom: 18px;
-    padding: 0 18px;
+    padding: 0 0 0 8px;
 }
 
 .filter-bar label {
     font-weight: 500;
     color: #3a3a3a;
+    font-size: 0.85rem;
+    line-height: 1;
+    margin: 0;
+    display: flex;
+    align-items: center;
 }
 
 .filter-bar select {
     padding: 7px 14px;
     border-radius: 6px;
     border: 1px solid #b8c6ff;
-    font-size: 1rem;
+    font-size: 13px;
     background: #fff;
     color: #333;
+    vertical-align: middle;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.refresh-btn {
+    background: #fff;
+    color: #6a8dff;
+    border: 1px solid #b8c6ff;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px 0 rgba(80, 110, 255, 0.07);
+    margin-left: auto;
+    margin-right: 8px;
+}
+
+.refresh-btn:hover {
+    background: #f5f7ff;
+    color: #4a6bff;
+}
+
+.refresh-btn:active {
+    transform: scale(0.95);
 }
 
 .login-modal {
@@ -278,14 +466,20 @@ h1 {
 }
 
 #login-form button {
-    width: 100%;
-    padding: 10px;
-    background: #6a8dff;
-    color: #fff;
+    background: linear-gradient(135deg, #8e7bff 0%, #7169e0 100%);
+    color: white;
     border: none;
-    border-radius: 6px;
-    font-size: 1rem;
+    border-radius: 4px;
     cursor: pointer;
+    font-size: 16px;
+    padding: 10px 20px;
+    transition: all 0.2s ease;
+}
+
+#login-form button:hover {
+    background: linear-gradient(135deg, #7a6bff 0%, #5f58d0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(142, 123, 255, 0.3);
 }
 
 .login-error {
@@ -373,20 +567,22 @@ h1 {
     min-width: 320px;
 }
 #close-change-password {
-    background: #fff;
-    color: #6a8dff;
-    border: 1px solid #b8c6ff;
-    border-radius: 6px;
-    padding: 6px 24px;
-    font-size: 1rem;
-    font-weight: 500;
+    background: linear-gradient(135deg, #8e7bff 0%, #7169e0 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
-    margin-top: 10px;
-    transition: background 0.15s, color 0.15s;
+    font-size: 16px;
+    padding: 10px 20px;
+    transition: all 0.2s ease;
+    min-width: 100px;
+    width: 120px;
+    margin-top: 0;
 }
 #close-change-password:hover {
-    background: #f5f7ff;
-    color: #dc3545;
+    background: linear-gradient(135deg, #7a6bff 0%, #5f58d0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(142, 123, 255, 0.3);
 }
 
 .user-block {
@@ -399,10 +595,154 @@ h1 {
     z-index: 12;
 }
 
+.user-menu {
+    position: relative;
+    margin-top: 6px;
+}
+
+.user-menu-btn {
+    background: #fff;
+    color: #6a8dff;
+    border: 1px solid #b8c6ff;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px 0 rgba(80, 110, 255, 0.07);
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 80px;
+}
+
+.user-menu-btn:hover {
+    background: #f5f7ff;
+    color: #4a6bff;
+    transform: scale(1.02);
+}
+
+.user-menu-btn svg {
+    transition: transform 0.2s ease;
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: #fff;
+    border: 1px solid #b8c6ff;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(80, 110, 255, 0.15);
+    min-width: 160px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+.user-menu-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    color: #6a8dff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.menu-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.menu-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.menu-item:hover {
+    background: #f5f7ff;
+    color: #4a6bff;
+}
+
+.menu-item:active {
+    background: #e8f2ff;
+}
+
 .task-monthyear {
     font-size: 0.6em;
     color: #888;
     margin-top: 2px;
     font-weight: 400;
     letter-spacing: 0.5px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.button-group button {
+    background: linear-gradient(135deg, #8e7bff 0%, #7169e0 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 10px 20px;
+    transition: all 0.2s ease;
+    min-width: 100px;
+    width: 120px;
+}
+
+.button-group button:hover {
+    background: linear-gradient(135deg, #7a6bff 0%, #5f58d0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(142, 123, 255, 0.3);
+}
+
+#change-password-form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+#change-password-form button {
+    background: linear-gradient(135deg, #8e7bff 0%, #7169e0 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 10px 20px;
+    transition: all 0.2s ease;
+    min-width: 100px;
+    width: 120px;
+}
+
+#change-password-form button:hover {
+    background: linear-gradient(135deg, #7a6bff 0%, #5f58d0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(142, 123, 255, 0.3);
+}
+
+#assigned-input {
+    color: #333;
 } 
