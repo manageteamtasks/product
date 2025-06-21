@@ -103,6 +103,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('month-year-input').value = currentMonthYear;
     }
 
+    // Function to generate next task number
+    function generateNextTaskNumber(tasks) {
+        let maxNumber = 0;
+        
+        tasks.forEach(task => {
+            if (task.TaskNumber && task.TaskNumber.startsWith('SS-')) {
+                const numberPart = task.TaskNumber.substring(3); // Remove 'SS-' prefix
+                const number = parseInt(numberPart, 10);
+                if (!isNaN(number) && number > maxNumber) {
+                    maxNumber = number;
+                }
+            }
+        });
+        
+        // If no existing task numbers found, start from 1
+        return `SS-${maxNumber + 1}`;
+    }
+
     // --- Kanban Logic ---
     assignedFilter.addEventListener('change', () => {
         currentFilter = assignedFilter.value;
@@ -170,11 +188,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const taskData = {
             ID: editId ? editId : `task-${new Date().getTime()}`,
+            TaskNumber: editId ? (allTasks.find(t => t.ID === editId)?.TaskNumber || generateNextTaskNumber(allTasks)) : generateNextTaskNumber(allTasks),
             Task: taskInput.value,
             Assigned: assignedInput.value,
             Status: statusInput.value,
             MonthYear: excelMonthYear
         };
+        
+        console.log('Generated task number:', taskData.TaskNumber);
+        console.log('Task data being sent:', taskData);
+        
         if (editId) {
             await handlePostRequest('updateTask', taskData);
             taskForm.removeAttribute('data-edit-id');
@@ -197,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(API_URL);
             if (!response.ok) throw new Error('Failed to fetch tasks');
             const tasks = await response.json();
+            console.log('Tasks received from backend:', tasks);
             allTasks = tasks;
             populateMonthYearFilter(tasks);
             renderTasks(tasks);
@@ -259,14 +283,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     ];
                     const monthName = monthNames[month - 1];
                     const yearDisplay = year.toString().slice(-2);
-                    monthYearDisplay = `${monthName} ${yearDisplay}`;
+                    monthYearDisplay = `${monthName}'${yearDisplay}`;
                 }
             }
             taskItem.innerHTML = `
+                ${task.TaskNumber && task.TaskNumber.startsWith('SS-') ? `<div class="task-number">${task.TaskNumber}</div>` : ''}
                 <div class="details">
                     <div class="task-name">${task.Task}</div>
-                    <div class="task-assigned">${task.Assigned ? task.Assigned : ''}</div>
-                    <div class="task-monthyear">${monthYearDisplay}</div>
+                    <div class="task-assigned">
+                        <div class="assigned-line">
+                            ${task.Assigned ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; padding-top: 2px;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>${task.Assigned}` : ''}
+                        </div>
+                        ${monthYearDisplay ? `<div class="task-monthyear">${monthYearDisplay}</div>` : ''}
+                    </div>
                 </div>
                 <div class="actions">
                     <button class="edit-btn" data-id="${task.ID}" title="Edit Task">
