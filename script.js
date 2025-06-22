@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // IMPORTANT: Replace this URL with your new Google Apps Script deployment URL
+    // After deploying the updated script, copy the new URL and replace this one
     const API_URL = 'https://script.google.com/macros/s/AKfycbxQrMCjdV5U1KxDa7n1fKreLzTuQMTj8S6ZYlxuEm-VwB_YT_c51O1BXjux76nGMInH/exec';
     const taskForm = document.getElementById('task-form');
     const taskList = document.getElementById('task-list');
@@ -21,6 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const userMenuBtn = document.getElementById('user-menu-btn');
     const userMenuDropdown = document.getElementById('user-menu-dropdown');
     const userMenuText = document.getElementById('user-menu-text');
+    
+    // Debug: Check if assigned input exists
+    console.log('Assigned input element found:', !!assignedInput);
+    if (assignedInput) {
+        console.log('Assigned input initial value:', assignedInput.value);
+        console.log('Assigned input display style:', assignedInput.style.display);
+    }
+    
     let allTasks = [];
     let currentFilter = '';
     let currentMonthYearFilter = '';
@@ -121,6 +131,33 @@ document.addEventListener('DOMContentLoaded', () => {
         return `SS-${maxNumber + 1}`;
     }
 
+    // Helper function to ensure assigned input is set for non-admin users
+    function ensureAssignedInputSet() {
+        console.log('ensureAssignedInputSet called');
+        console.log('loggedInRole:', loggedInRole);
+        console.log('loggedInUser:', loggedInUser);
+        console.log('assignedInput exists:', !!assignedInput);
+        
+        if (!assignedInput) {
+            console.error('Assigned input element not found!');
+            return;
+        }
+        
+        if (loggedInRole !== 'admin') {
+            console.log('Hiding assigned input for non-admin user:', loggedInUser);
+            assignedInput.style.display = 'none';
+            // Still set the value internally for form submission
+            assignedInput.value = loggedInUser || '';
+            console.log('Assigned input value set to:', assignedInput.value);
+        } else {
+            console.log('Admin user - assigned input visible and enabled');
+            assignedInput.style.display = 'block';
+            assignedInput.disabled = false;
+            assignedInput.style.backgroundColor = '';
+            assignedInput.style.cursor = '';
+        }
+    }
+
     // --- Kanban Logic ---
     assignedFilter.addEventListener('change', () => {
         currentFilter = assignedFilter.value;
@@ -140,15 +177,70 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshBtn.style.transition = 'transform 0.5s ease';
         
         try {
+            const authToken = localStorage.getItem('authToken');
+            
+            // Check if user is logged in
+            if (!authToken) {
+                console.log('No auth token found, redirecting to login');
+                showLogin(null);
+                return;
+            }
+            
             // Add cache-busting parameter to force fresh data
             const timestamp = new Date().getTime();
-            const response = await fetch(`${API_URL}?t=${timestamp}`);
-            if (!response.ok) throw new Error('Failed to fetch tasks');
-            const tasks = await response.json();
+            let url = `${API_URL}?token=${encodeURIComponent(authToken)}&t=${timestamp}`;
+            
+            console.log('Refreshing tasks with URL:', url);
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: Failed to fetch tasks`);
+            }
+            
+            const responseText = await response.text();
+            let tasks;
+            
+            try {
+                tasks = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                console.error('Raw response text:', responseText);
+                throw new Error('Invalid response format from server');
+            }
+            
+            // Check if the response indicates an authentication error
+            if (tasks.status === 'error' && tasks.message && 
+                (tasks.message.includes('No valid authorization token provided') || 
+                 tasks.message.includes('Invalid or expired token'))) {
+                console.log('Authentication failed, redirecting to login');
+                // Clear invalid token and show login
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('loggedInRole');
+                loggedInUser = null;
+                loggedInRole = '';
+                showLogin(null);
+                return;
+            }
+            
             allTasks = tasks;
             renderTasks(tasks);
         } catch (error) {
             console.error('Error refreshing tasks:', error);
+            
+            // If it's an authentication error, redirect to login
+            if (error.message.includes('401') || error.message.includes('403') || 
+                error.message.includes('No valid authorization token') || 
+                error.message.includes('Invalid or expired token')) {
+                console.log('Authentication error detected, redirecting to login');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('loggedInRole');
+                loggedInUser = null;
+                loggedInRole = '';
+                showLogin(null);
+                return;
+            }
         } finally {
             // Reset button animation
             setTimeout(() => {
@@ -161,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelEditBtn.addEventListener('click', () => {
         taskForm.reset();
         setDefaultMonthYear();
+        ensureAssignedInputSet();
         taskForm.removeAttribute('data-edit-id');
         taskForm.querySelector('button[type="submit"]').textContent = 'Add';
         cancelEditBtn.style.display = 'none';
@@ -171,8 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const editId = taskForm.getAttribute('data-edit-id');
         
         // Ensure assigned input is set for non-admin users
-        if (loggedInRole !== 'admin' && assignedInput) {
+        ensureAssignedInputSet();
+        
+        // Double-check: if it's a non-admin user, force set the assigned value
+        if (loggedInRole !== 'admin') {
             assignedInput.value = loggedInUser;
+            console.log('Forced assigned input to:', assignedInput.value);
         }
         
         // Convert month-year input to Excel-friendly format
@@ -197,35 +294,106 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('Generated task number:', taskData.TaskNumber);
         console.log('Task data being sent:', taskData);
+        console.log('Assigned value in taskData:', taskData.Assigned);
         
         if (editId) {
-            await handlePostRequest('updateTask', taskData);
-            taskForm.removeAttribute('data-edit-id');
-            taskForm.querySelector('button[type="submit"]').textContent = 'Add';
-            cancelEditBtn.style.display = 'none';
+            try {
+                await handlePostRequest('updateTask', taskData);
+                taskForm.removeAttribute('data-edit-id');
+                taskForm.querySelector('button[type="submit"]').textContent = 'Add';
+                cancelEditBtn.style.display = 'none';
+                taskForm.reset();
+                setDefaultMonthYear();
+                // Reset assigned input for non-admin users after form reset
+                ensureAssignedInputSet();
+                fetchTasks();
+            } catch (error) {
+                console.error('Failed to update task:', error);
+                // Don't reset form or fetch tasks on error
+                return;
+            }
         } else {
-            await handlePostRequest('addTask', taskData);
+            try {
+                await handlePostRequest('addTask', taskData);
+                taskForm.reset();
+                setDefaultMonthYear();
+                // Reset assigned input for non-admin users after form reset
+                ensureAssignedInputSet();
+                fetchTasks();
+            } catch (error) {
+                console.error('Failed to add task:', error);
+                // Don't reset form or fetch tasks on error
+                return;
+            }
         }
-        taskForm.reset();
-        setDefaultMonthYear();
-        // Reset assigned input for non-admin users after form reset
-        if (loggedInRole !== 'admin' && assignedInput) {
-            assignedInput.value = loggedInUser;
-        }
-        fetchTasks();
     });
 
     async function fetchTasks() {
         try {
-            const response = await fetch(API_URL);
-            if (!response.ok) throw new Error('Failed to fetch tasks');
-            const tasks = await response.json();
+            const authToken = localStorage.getItem('authToken');
+            
+            // Check if user is logged in
+            if (!authToken) {
+                console.log('No auth token found, redirecting to login');
+                showLogin(null);
+                return;
+            }
+            
+            let url = `${API_URL}?token=${encodeURIComponent(authToken)}`;
+            console.log('Fetching tasks with URL:', url);
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: Failed to fetch tasks`);
+            }
+            
+            const responseText = await response.text();
+            let tasks;
+            
+            try {
+                tasks = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                console.error('Raw response text:', responseText);
+                throw new Error('Invalid response format from server');
+            }
+            
+            // Check if the response indicates an authentication error
+            if (tasks.status === 'error' && tasks.message && 
+                (tasks.message.includes('No valid authorization token provided') || 
+                 tasks.message.includes('Invalid or expired token'))) {
+                console.log('Authentication failed, redirecting to login');
+                // Clear invalid token and show login
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('loggedInRole');
+                loggedInUser = null;
+                loggedInRole = '';
+                showLogin(null);
+                return;
+            }
+            
             console.log('Tasks received from backend:', tasks);
             allTasks = tasks;
             populateMonthYearFilter(tasks);
             renderTasks(tasks);
         } catch (error) {
             console.error('Error fetching tasks:', error);
+            
+            // If it's an authentication error, redirect to login
+            if (error.message.includes('401') || error.message.includes('403') || 
+                error.message.includes('No valid authorization token') || 
+                error.message.includes('Invalid or expired token')) {
+                console.log('Authentication error detected, redirecting to login');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('loggedInRole');
+                loggedInUser = null;
+                loggedInRole = '';
+                showLogin(null);
+                return;
+            }
+            
             taskList.innerHTML = '<p>Error loading tasks. Please try again.</p>';
         }
     }
@@ -328,8 +496,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Set assigned input based on user role
                     if (loggedInRole === 'admin') {
                         assignedInput.value = task.Assigned;
+                        assignedInput.style.display = 'block';
+                        assignedInput.disabled = false;
+                        assignedInput.style.backgroundColor = '';
+                        assignedInput.style.cursor = '';
                     } else {
-                        assignedInput.value = loggedInUser;
+                        ensureAssignedInputSet();
                     }
                     
                     statusInput.value = task.Status;
@@ -377,20 +549,107 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handlePostRequest(action, payload) {
         try {
-            const response = await fetch(`${API_URL}?action=${action}`, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
-            });
-            if (response.type !== 'redirect' && !response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Failed to ${action}: ${errorText}`);
+            const authToken = localStorage.getItem('authToken');
+            
+            console.log(`Sending ${action} request`);
+            console.log('Payload:', payload);
+            console.log('Auth token:', authToken);
+            
+            // Use URL parameters for all actions to avoid CORS preflight
+            let url = `${API_URL}?action=${action}`;
+            
+            // Add auth token as parameter if it exists
+            if (authToken) {
+                url += `&token=${encodeURIComponent(authToken)}`;
             }
-            console.log(`${action} successful`);
+            
+            // Add payload data as URL parameters
+            Object.keys(payload).forEach(key => {
+                url += `&${encodeURIComponent(key)}=${encodeURIComponent(payload[key])}`;
+            });
+            
+            console.log('Request URL:', url);
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                // No headers to avoid CORS preflight
+            });
+            
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
+            // Always try to get the response text first
+            const responseText = await response.text();
+            console.log('Response text length:', responseText.length);
+            console.log('Response text:', responseText);
+            
+            // Check if response is empty or redirect
+            if (!responseText || responseText.trim() === '') {
+                throw new Error('Empty response from server');
+            }
+            
+            let responseData;
+            try {
+                responseData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                console.error('Raw response text:', responseText);
+                throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+            }
+            
+            // Check if the response indicates an error
+            if (responseData.status === 'error') {
+                console.error('API returned error:', responseData.message);
+                
+                // Check if it's an authentication error
+                if (responseData.message && 
+                    (responseData.message.includes('No valid authorization token provided') || 
+                     responseData.message.includes('Invalid or expired token'))) {
+                    console.log('Authentication error detected, redirecting to login');
+                    // Clear invalid token and show login
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('loggedInUser');
+                    localStorage.removeItem('loggedInRole');
+                    loggedInUser = null;
+                    loggedInRole = '';
+                    showLogin(null);
+                    return; // Don't throw error, just return
+                }
+                
+                throw new Error(responseData.message || 'API returned an error');
+            }
+            
+            // Check HTTP status codes
+            if (response.status >= 400) {
+                throw new Error(`HTTP ${response.status}: ${responseData.message || responseText}`);
+            }
+            
+            console.log(`${action} successful:`, responseData);
+            return responseData; // Return the response data
         } catch (error) {
             console.error(`Error with ${action}:`, error);
+            console.error('Error stack:', error.stack);
+            
+            // Check if it's an authentication error
+            if (error.message && 
+                (error.message.includes('No valid authorization token provided') || 
+                 error.message.includes('Invalid or expired token') ||
+                 error.message.includes('401') ||
+                 error.message.includes('403'))) {
+                console.log('Authentication error detected, redirecting to login');
+                // Clear invalid token and show login
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('loggedInRole');
+                loggedInUser = null;
+                loggedInRole = '';
+                showLogin(null);
+                return; // Don't throw error, just return
+            }
+            
+            // Show error to user for non-authentication errors
+            alert(`Error: ${error.message}`);
+            throw error; // Re-throw to prevent further processing
         }
     }
 
@@ -487,9 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (assignedInput) {
                     assignedInput.style.display = 'none';
-                    assignedInput.disabled = true;
-                    // Set assigned input to current user's name
-                    assignedInput.value = user;
+                    assignedInput.value = loggedInUser;
                 }
                 // Hide "Done" option for non-admin users
                 if (statusInput) {
@@ -505,6 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             document.body.classList.remove('body-blur');
+            ensureAssignedInputSet();
             fetchTasks();
         } else {
             loginModal.style.display = 'flex';
@@ -521,6 +779,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set default month-year value on page load
     setDefaultMonthYear();
+    
+    // Ensure assigned input is set for non-admin users on page load
+    ensureAssignedInputSet();
 
     // User menu functionality
     userMenuBtn.addEventListener('click', (e) => {
@@ -545,6 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('loggedInUser');
         localStorage.removeItem('loggedInRole');
+        localStorage.removeItem('authToken');
         loggedInRole = '';
         userMenuDropdown.classList.remove('show');
         showLogin(null);
@@ -566,12 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = localStorage.getItem('loggedInUser');
         changePasswordError.textContent = '';
         try {
-            const response = await fetch(`${API_URL}?action=changePassword`, {
-                method: 'POST',
-                body: JSON.stringify({ user, newPassword }),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-            const result = await response.json();
+            const result = await handlePostRequest('changePassword', { user, newPassword });
             if (result.status === 'success') {
                 changePasswordModal.style.display = 'none';
                 alert('Password updated successfully!');
@@ -588,22 +845,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = document.getElementById('login-user').value;
         const password = document.getElementById('login-password').value;
         loginError.textContent = '';
+        
+        console.log('Login attempt for user:', user);
+        
         try {
-            const response = await fetch(`${API_URL}?action=login`, {
-                method: 'POST',
-                body: JSON.stringify({ user, password }),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-            const result = await response.json();
+            const loginData = { user, password };
+            console.log('Sending login data:', loginData);
+            
+            const result = await handlePostRequest('login', loginData);
+            
+            console.log('Parsed login result:', result);
+            
             if (result.status === 'success') {
+                console.log('Login successful, setting localStorage');
+                console.log('User:', user);
+                console.log('Role from server:', result.data.role);
+                console.log('Token from server:', result.data.token);
+                
                 localStorage.setItem('loggedInUser', user);
                 localStorage.setItem('loggedInRole', result.data.role || '');
+                localStorage.setItem('authToken', result.data.token || '');
                 loggedInRole = result.data.role || '';
+                loggedInUser = user; // Update the global variable immediately
+                
+                console.log('Stored loggedInRole:', loggedInRole);
+                console.log('Stored loggedInUser:', localStorage.getItem('loggedInUser'));
+                console.log('Updated loggedInUser variable:', loggedInUser);
+                
                 showLogin(user);
             } else {
-                loginError.textContent = 'Invalid username or password';
+                console.log('Login failed:', result.message);
+                loginError.textContent = result.message || 'Invalid username or password';
             }
         } catch (err) {
+            console.error('Login error:', err);
             loginError.textContent = 'Login failed. Please try again.';
         }
     });

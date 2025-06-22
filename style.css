@@ -798,6 +798,15 @@ h1 {
     color: #333;
 }
 
+#assigned-input[style*="display: none"] {
+    margin: 0;
+    padding: 0;
+    width: 0;
+    height: 0;
+    border: none;
+    overflow: hidden;
+}
+
 .custom-shape-divider-bottom-1750539592 {
     position: absolute;
     bottom: 0;
