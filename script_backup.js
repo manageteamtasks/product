@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const changePasswordForm = document.getElementById('change-password-form');
     const changePasswordError = document.getElementById('change-password-error');
     const closeChangePassword = document.getElementById('close-change-password');
+    const priorityInput = document.getElementById('priority-input');
     let allTasks = [];
     let currentFilter = '';
 
@@ -45,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Task: taskInput.value,
             Assigned: assignedInput.value,
             Status: statusInput.value,
-            MonthYear: excelMonthYear
+            MonthYear: excelMonthYear,
+            Priority: priorityInput.value || 'Standard'
         };
         if (editId) {
             await handlePostRequest('updateTask', taskData);
@@ -124,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="task-name">${task.Task}</div>
                     <div class="task-assigned">${task.Assigned ? task.Assigned : ''}</div>
                     <div class="task-monthyear">${monthYearDisplay}</div>
+                    <div class="task-priority priority-${(task.Priority || 'Standard').toLowerCase()}">${task.Priority || 'Standard'}</div>
                 </div>
                 <div class="actions">
                     <button class="edit-btn" data-id="${task.ID}" title="Edit Task">
@@ -154,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     taskInput.value = task.Task;
                     assignedInput.value = task.Assigned;
                     statusInput.value = task.Status;
+                    priorityInput.value = task.Priority || 'Standard';
                     
                     // Convert Excel date format back to YYYY-MM for the input field
                     let monthYearValue = task.MonthYear || '';

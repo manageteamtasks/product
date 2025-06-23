@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userMenuBtn = document.getElementById('user-menu-btn');
     const userMenuDropdown = document.getElementById('user-menu-dropdown');
     const userMenuText = document.getElementById('user-menu-text');
+    const priorityInput = document.getElementById('priority-input');
     
     // Debug: Check if assigned input exists
     console.log('Assigned input element found:', !!assignedInput);
@@ -289,7 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Task: taskInput.value,
             Assigned: assignedInput.value,
             Status: statusInput.value,
-            MonthYear: excelMonthYear
+            MonthYear: excelMonthYear,
+            Priority: priorityInput.value || 'Standard'
         };
         
         console.log('Generated task number:', taskData.TaskNumber);
@@ -406,6 +408,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentMonthYearFilter) {
             filtered = filtered.filter(task => normalizeMonthYear(task.MonthYear) === currentMonthYearFilter);
         }
+        // Lane mapping (declare only once)
+        const laneStatusMap = {
+            'lane-todo': 'To Do',
+            'lane-inprogress': 'In Progress',
+            'lane-review': 'Review',
+            'lane-hold': 'Hold',
+            'lane-done': 'Done'
+        };
+        // Count tasks per lane
+        const laneCounts = {
+            'lane-todo': 0,
+            'lane-inprogress': 0,
+            'lane-review': 0,
+            'lane-hold': 0,
+            'lane-done': 0
+        };
+        filtered.forEach(task => {
+            let status = (task.Status || '').toLowerCase();
+            let laneId = '';
+            switch (status) {
+                case 'to do': laneId = 'lane-todo'; break;
+                case 'in progress': laneId = 'lane-inprogress'; break;
+                case 'review': laneId = 'lane-review'; break;
+                case 'hold': laneId = 'lane-hold'; break;
+                case 'done': laneId = 'lane-done'; break;
+                default: laneId = 'lane-todo'; break;
+            }
+            laneCounts[laneId]++;
+        });
+        // Update lane headers with counts (before clearing innerHTML)
+        Object.keys(laneStatusMap).forEach(laneId => {
+            const lane = document.getElementById(laneId);
+            if (lane) {
+                const h2 = lane.parentElement.querySelector('h2');
+                if (h2) {
+                    h2.textContent = `${laneStatusMap[laneId]} (${laneCounts[laneId]})`;
+                }
+            }
+        });
         document.getElementById('lane-todo').innerHTML = '';
         document.getElementById('lane-inprogress').innerHTML = '';
         document.getElementById('lane-review').innerHTML = '';
@@ -415,15 +456,20 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('lane-todo').innerHTML = '<p>No tasks found. Add one above!</p>';
             return;
         }
-        const cardColors = [
-            '#faf0e6', '#fff8dc', '#f5f5dc', '#ffe4e1', '#e6e6fa', '#fdf5e6', '#fffacd'
-        ];
         const loggedInUser = localStorage.getItem('loggedInUser');
         const loggedInRole = localStorage.getItem('loggedInRole');
         filtered.forEach(task => {
             const taskItem = document.createElement('div');
             taskItem.className = 'task-item';
-            const color = cardColors[Math.floor(Math.random() * cardColors.length)];
+            // Set card color based on priority
+            let color = '#EEEFF8'; // Default to Standard (#EEEFF8)
+            if ((task.Priority || '').toLowerCase() === 'low') {
+                color = '#fffacd'; // Lemon Chiffon
+            } else if ((task.Priority || '').toLowerCase() === 'critical') {
+                color = '#ffe4e1'; // Misty Rose
+            } else if ((task.Priority || '').toLowerCase() === 'standard') {
+                color = '#EEEFF8'; // Standard
+            }
             taskItem.style.background = color;
             let monthYearDisplay = '';
             if (task.MonthYear) {
@@ -486,14 +532,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             document.getElementById(laneId).appendChild(taskItem);
         });
+        // Restore edit and delete button event listeners
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 const taskId = e.target.closest('button').dataset.id;
                 const task = filtered.find(t => t.ID === taskId);
                 if (task) {
                     taskInput.value = task.Task;
-                    
-                    // Set assigned input based on user role
                     if (loggedInRole === 'admin') {
                         assignedInput.value = task.Assigned;
                         assignedInput.style.display = 'block';
@@ -503,14 +548,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         ensureAssignedInputSet();
                     }
-                    
                     statusInput.value = task.Status;
-                    
+                    priorityInput.value = task.Priority || 'Standard';
                     // Convert Excel date format back to YYYY-MM for the input field
                     let monthYearValue = task.MonthYear || '';
-                    
                     if (monthYearValue.includes('/')) {
-                        // Excel format: DD/MM/YYYY -> YYYY-MM
                         const parts = monthYearValue.split('/');
                         if (parts.length === 3) {
                             const day = parts[0];
@@ -519,15 +561,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             monthYearValue = `${year}-${month.padStart(2, '0')}`;
                         }
                     } else if (monthYearValue.includes('T') && monthYearValue.includes('Z')) {
-                        // ISO date format: 2025-01-04T18:30:00.000Z -> YYYY-MM
                         const date = new Date(monthYearValue);
                         const year = date.getFullYear();
                         const month = (date.getMonth() + 1).toString().padStart(2, '0');
                         monthYearValue = `${year}-${month}`;
                     }
-                    
                     document.getElementById('month-year-input').value = monthYearValue;
-                    
                     taskForm.setAttribute('data-edit-id', task.ID);
                     taskForm.querySelector('button[type="submit"]').textContent = 'Update';
                     cancelEditBtn.style.display = 'inline-block';
@@ -537,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loggedInRole === 'admin') {
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', async (e) => {
-                    const taskId = e.target.dataset.id;
+                    const taskId = e.target.closest('button').dataset.id;
                     if (confirm('Are you sure you want to delete this task?')) {
                         await handlePostRequest('deleteTask', { ID: taskId });
                         fetchTasks();
@@ -545,6 +584,91 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         }
+        // Restore drag-and-drop functionality
+        // Use laneStatusMap from above
+        // Make task cards draggable if user has edit access
+        filtered.forEach(task => {
+            const laneId = (() => {
+                switch ((task.Status || '').toLowerCase()) {
+                    case 'to do': return 'lane-todo';
+                    case 'in progress': return 'lane-inprogress';
+                    case 'review': return 'lane-review';
+                    case 'hold': return 'lane-hold';
+                    case 'done': return 'lane-done';
+                    default: return 'lane-todo';
+                }
+            })();
+            const card = Array.from(document.getElementById(laneId).children).find(el => el.querySelector('.edit-btn')?.dataset.id === task.ID);
+            if (!card) return;
+            if (loggedInRole === 'admin' || (task.Assigned && task.Assigned === loggedInUser)) {
+                card.setAttribute('draggable', 'true');
+                card.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', task.ID);
+                    card.classList.add('dragging');
+                });
+                card.addEventListener('dragend', function(e) {
+                    card.classList.remove('dragging');
+                });
+            } else {
+                card.removeAttribute('draggable');
+            }
+        });
+        // Set up lane drop targets
+        Object.keys(laneStatusMap).forEach(laneId => {
+            const lane = document.getElementById(laneId);
+            lane.ondragover = function(e) {
+                e.preventDefault();
+                lane.classList.add('drag-over');
+            };
+            lane.ondragleave = function(e) {
+                lane.classList.remove('drag-over');
+            };
+            lane.ondrop = async function(e) {
+                e.preventDefault();
+                lane.classList.remove('drag-over');
+                const taskId = e.dataTransfer.getData('text/plain');
+                const task = allTasks.find(t => t.ID === taskId);
+                if (!task) return;
+                const loggedInUser = localStorage.getItem('loggedInUser');
+                const loggedInRole = localStorage.getItem('loggedInRole');
+                const newStatus = laneStatusMap[laneId];
+                // Restrict non-admins from moving to Done
+                if (newStatus === 'Done' && loggedInRole !== 'admin') {
+                    alert('Only admin can move tasks to Done.');
+                    return;
+                }
+                if (!(loggedInRole === 'admin' || (task.Assigned && task.Assigned === loggedInUser))) {
+                    alert('You do not have permission to move this task.');
+                    return;
+                }
+                if (task.Status === newStatus) return;
+                // Move card in DOM instantly
+                const card = Array.from(document.querySelectorAll('.task-item')).find(el => el.querySelector('.edit-btn')?.dataset.id === taskId);
+                const oldLaneId = (() => {
+                    switch ((task.Status || '').toLowerCase()) {
+                        case 'to do': return 'lane-todo';
+                        case 'in progress': return 'lane-inprogress';
+                        case 'review': return 'lane-review';
+                        case 'hold': return 'lane-hold';
+                        case 'done': return 'lane-done';
+                        default: return 'lane-todo';
+                    }
+                })();
+                const oldLane = document.getElementById(oldLaneId);
+                lane.appendChild(card);
+                card.classList.add('just-moved');
+                setTimeout(() => card.classList.remove('just-moved'), 400);
+                task.Status = newStatus;
+                try {
+                    await handlePostRequest('updateTask', { ...task, Status: newStatus });
+                    fetchTasks();
+                } catch (err) {
+                    if (oldLane) oldLane.appendChild(card);
+                    task.Status = laneStatusMap[oldLaneId];
+                    alert('Failed to update task status.');
+                }
+            };
+        });
     }
 
     async function handlePostRequest(action, payload) {

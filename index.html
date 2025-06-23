@@ -86,10 +86,15 @@
                 <option value="Done">Done</option>
             </select>
             <input type="month" id="month-year-input" required>
+            <select id="priority-input" name="priority" required>
+                <option value="Critical">Critical</option>
+                <option value="Standard" selected>Standard</option>
+                <option value="Low">Low</option>
+            </select>
             <button type="submit">Add</button>
             <button type="button" id="cancel-edit-btn" style="display: none;">Cancel</button>
         </form>
-        <div id="task-lanes" class="task-lanes">
+        <div id="task-lanes" class="task-lanes" style="margin-top: 10px;">
             <div class="lane" data-status="To Do">
                 <h2>To Do</h2>
                 <div class="lane-tasks" id="lane-todo"></div>

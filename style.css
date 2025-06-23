@@ -1,6 +1,6 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #fff;
+    background: #f5f7ff;
     margin: 0;
     padding: 20px;
     color: #333;
@@ -20,7 +20,7 @@ body::before {
     margin: 0 16px;
     background: #f5f7ff;
     padding: 6px 0 20px 0;
-    border-radius: 18px;
+    border-radius: 4px;
     box-shadow: 0 4px 24px 0 rgba(80, 110, 255, 0.07);
 }
 
@@ -109,10 +109,11 @@ h1 {
     border-bottom: 1px solid #eee;
     margin-bottom: 10px;
     background: #fffbe6;
-    border-radius: 6px;
+    border-radius: 4px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     border: 1px solid #f3e9c7;
     position: relative;
+    transition: box-shadow 0.2s, transform 0.2s, opacity 0.2s;
 }
 
 .task-item:last-child {
@@ -164,7 +165,7 @@ h1 {
 
 .task-item .task-status {
     padding: 5px 10px;
-    border-radius: 12px;
+    border-radius: 4px;
     font-size: 0.8em;
     background-color: #eee;
     color: #333;
@@ -189,37 +190,15 @@ h1 {
     opacity: 1;
 }
 
-.task-item .actions button.edit-btn {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: #6c757d;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 28px;
-    height: 28px;
-}
-
-.task-item .actions button.edit-btn:hover {
-    background: #e3f2fd;
-    border-color: #2196f3;
-    color: #2196f3;
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
-}
-
+.task-item .actions button.edit-btn,
 .task-item .actions button.delete-btn {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
+    background: linear-gradient(135deg, #8e7bff 0%, #7169e0 100%);
+    border: none;
+    border-radius: 4px;
     padding: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
-    color: #6c757d;
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -227,30 +206,23 @@ h1 {
     height: 28px;
 }
 
+.task-item .actions button.edit-btn:hover,
 .task-item .actions button.delete-btn:hover {
-    background: #ffebee;
-    border-color: #f44336;
-    color: #f44336;
+    background: linear-gradient(135deg, #7169e0 0%, #5f54c7 100%);
+    color: #fff;
     transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
+    box-shadow: 0 2px 8px rgba(122, 110, 233, 0.15);
 }
 
-.task-item .actions button.edit-btn svg {
-    width: 14px;
-    height: 14px;
-    transition: transform 0.2s ease;
-}
-
+.task-item .actions button.edit-btn svg,
 .task-item .actions button.delete-btn svg {
-    width: 14px;
     height: 14px;
     transition: transform 0.2s ease;
+    color: #fff;
+    stroke: #fff;
 }
 
-.task-item .actions button.edit-btn:hover svg {
-    transform: scale(1.1);
-}
-
+.task-item .actions button.edit-btn:hover svg,
 .task-item .actions button.delete-btn:hover svg {
     transform: scale(1.1);
 }
@@ -276,7 +248,7 @@ h1 {
 .lane {
     flex: 1 1 0;
     background: #fff;
-    border-radius: 12px;
+    border-radius: 4px;
     padding: 10px;
     min-width: 200px;
     box-shadow: 0 1px 6px rgba(80,110,255,0.06);
@@ -295,7 +267,7 @@ h1 {
     letter-spacing: 0.8px;
     padding: 8px 6px;
     background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
-    border-radius: 6px;
+    border-radius: 4px;
     border: 1px solid #d1dbfa;
     box-shadow: 0 1px 3px rgba(80, 110, 255, 0.08);
     position: relative;
@@ -321,7 +293,7 @@ h1 {
 
 /* Custom colors for each status */
 .lane[data-status="To Do"] h2 {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: #e6e0ff !important;
     border-color: #ced4da;
     color: #6c757d;
 }
@@ -399,7 +371,7 @@ h1 {
     position: relative;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     margin-bottom: 10px;
-    border-radius: 12px;
+    border-radius: 4px;
     margin-left: 16px;
     margin-right: 16px;
 }
@@ -446,7 +418,7 @@ h1 {
 
 .filter-bar select {
     padding: 7px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     border: 1px solid #b8c6ff;
     font-size: 13px;
     background: #fff;
@@ -461,7 +433,7 @@ h1 {
     background: #fff;
     color: #6a8dff;
     border: 1px solid #b8c6ff;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 8px;
     cursor: pointer;
     display: flex;
@@ -494,7 +466,7 @@ h1 {
 
 .login-modal-content {
     background: #f5f7ff;
-    border-radius: 12px;
+    border-radius: 4px;
     box-shadow: 0 2px 12px 0 rgba(80, 110, 255, 0.07);
     padding: 32px 24px 24px 24px;
     text-align: center;
@@ -510,7 +482,7 @@ h1 {
     width: 90%;
     margin-bottom: 14px;
     padding: 10px;
-    border-radius: 6px;
+    border-radius: 4px;
     border: 1px solid #b8c6ff;
     font-size: 1rem;
 }
@@ -545,7 +517,7 @@ h1 {
     background: #fff;
     color: #6a8dff;
     border: 1px solid #b8c6ff;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 6px 0;
     font-size: 1rem;
     font-weight: 500;
@@ -566,7 +538,7 @@ h1 {
     background: #fff;
     color: #6a8dff;
     border: 1px solid #b8c6ff;
-    border-radius: 20px;
+    border-radius: 4px;
     padding: 4px 18px 4px 32px;
     font-size: 1.05rem;
     font-weight: 500;
@@ -600,7 +572,7 @@ h1 {
     background: #fff;
     color: #6a8dff;
     border: 1px solid #b8c6ff;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 6px 0;
     font-size: 1rem;
     font-weight: 500;
@@ -654,7 +626,7 @@ h1 {
     background: #fff;
     color: #6a8dff;
     border: 1px solid #b8c6ff;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 8px 12px;
     cursor: pointer;
     display: flex;
@@ -683,7 +655,7 @@ h1 {
     right: 0;
     background: #fff;
     border: 1px solid #b8c6ff;
-    border-radius: 8px;
+    border-radius: 4px;
     box-shadow: 0 4px 16px rgba(80, 110, 255, 0.15);
     min-width: 160px;
     opacity: 0;
@@ -714,11 +686,11 @@ h1 {
 }
 
 .menu-item:first-child {
-    border-radius: 8px 8px 0 0;
+    border-radius: 4px 4px 0 0;
 }
 
 .menu-item:last-child {
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 4px 4px;
 }
 
 .menu-item:hover {
@@ -839,4 +811,44 @@ h1 {
     height: 42px;
     margin-left: 10px;
     margin-right: 8px;
+}
+
+.drag-over {
+    background: #e0e7ff !important;
+    border: 2px dashed #6366f1;
+    transition: background 0.2s, border 0.2s;
+}
+
+.task-item.dragging {
+    opacity: 0.5;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    transform: scale(1.04);
+    z-index: 1000;
+}
+
+.task-priority {
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.priority-critical {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #c62828;
+}
+
+.priority-standard {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #1565c0;
+}
+
+.priority-low {
+    background: #f9fbe7;
+    color: #9e9d24;
+    border: 1px solid #9e9d24;
 } 
