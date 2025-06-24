@@ -454,83 +454,114 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lane-done').innerHTML = '';
         if (filtered.length === 0) {
             document.getElementById('lane-todo').innerHTML = '<p>No tasks found. Add one above!</p>';
+            // Update total tasks count
+            const totalTasksCount = document.getElementById('total-tasks-count');
+            if (totalTasksCount) totalTasksCount.textContent = '0 Task(s)';
             return;
+        }
+        // Update total tasks count
+        const totalTasksCount = document.getElementById('total-tasks-count');
+        if (totalTasksCount) {
+            if (filtered.length === 1) {
+                totalTasksCount.textContent = '1 Task';
+            } else {
+                totalTasksCount.textContent = `${filtered.length} Tasks`;
+            }
         }
         const loggedInUser = localStorage.getItem('loggedInUser');
         const loggedInRole = localStorage.getItem('loggedInRole');
-        filtered.forEach(task => {
-            const taskItem = document.createElement('div');
-            taskItem.className = 'task-item';
-            // Set card color based on priority
-            let color = '#EEEFF8'; // Default to Standard (#EEEFF8)
-            if ((task.Priority || '').toLowerCase() === 'low') {
-                color = '#fffacd'; // Lemon Chiffon
-            } else if ((task.Priority || '').toLowerCase() === 'critical') {
-                color = '#ffe4e1'; // Misty Rose
-            } else if ((task.Priority || '').toLowerCase() === 'standard') {
-                color = '#EEEFF8'; // Standard
+
+        // --- SORTING LOGIC START ---
+        // Priority order: Critical (1), Standard (2), Low (3)
+        const priorityOrder = { 'critical': 1, 'standard': 2, 'low': 3 };
+        function getPriorityValue(priority) {
+            return priorityOrder[(priority || 'standard').toLowerCase()] || 2;
+        }
+        function getTaskNumberValue(taskNumber) {
+            if (typeof taskNumber === 'string' && taskNumber.startsWith('SS-')) {
+                const num = parseInt(taskNumber.substring(3), 10);
+                return isNaN(num) ? Infinity : num;
             }
-            taskItem.style.background = color;
-            let monthYearDisplay = '';
-            if (task.MonthYear) {
-                // Handle both YYYY-MM format and Excel DD/MM/YYYY format
-                let year, month;
-                if (task.MonthYear.includes('/')) {
-                    // Excel format: DD/MM/YYYY
-                    const parts = task.MonthYear.split('/');
-                    if (parts.length === 3) {
-                        month = parseInt(parts[1], 10);
-                        year = parseInt(parts[2], 10);
+            return Infinity;
+        }
+        // For each lane, filter, sort, and render tasks
+        Object.entries(laneStatusMap).forEach(([laneId, statusName]) => {
+            // Filter tasks for this lane
+            const laneTasks = filtered.filter(task => (task.Status || '').toLowerCase() === statusName.toLowerCase());
+            // Sort by priority, then by task number
+            laneTasks.sort((a, b) => {
+                const pa = getPriorityValue(a.Priority);
+                const pb = getPriorityValue(b.Priority);
+                if (pa !== pb) return pa - pb;
+                // If same priority, sort by task number
+                const na = getTaskNumberValue(a.TaskNumber);
+                const nb = getTaskNumberValue(b.TaskNumber);
+                return na - nb;
+            });
+            // Render sorted tasks
+            laneTasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'task-item';
+                // Set card color based on priority
+                let color = '#EEEFF8'; // Default to Standard (#EEEFF8)
+                if ((task.Priority || '').toLowerCase() === 'low') {
+                    color = '#fffacd'; // Lemon Chiffon
+                } else if ((task.Priority || '').toLowerCase() === 'critical') {
+                    color = '#ffe4e1'; // Misty Rose
+                } else if ((task.Priority || '').toLowerCase() === 'standard') {
+                    color = '#EEEFF8'; // Standard
+                }
+                taskItem.style.background = color;
+                let monthYearDisplay = '';
+                if (task.MonthYear) {
+                    // Handle both YYYY-MM format and Excel DD/MM/YYYY format
+                    let year, month;
+                    if (task.MonthYear.includes('/')) {
+                        // Excel format: DD/MM/YYYY
+                        const parts = task.MonthYear.split('/');
+                        if (parts.length === 3) {
+                            month = parseInt(parts[1], 10);
+                            year = parseInt(parts[2], 10);
+                        }
+                    } else if (task.MonthYear.includes('-')) {
+                        // Original format: YYYY-MM
+                        const [yearStr, monthStr] = task.MonthYear.split('-');
+                        year = parseInt(yearStr, 10);
+                        month = parseInt(monthStr, 10);
                     }
-                } else if (task.MonthYear.includes('-')) {
-                    // Original format: YYYY-MM
-                    const [yearStr, monthStr] = task.MonthYear.split('-');
-                    year = parseInt(yearStr, 10);
-                    month = parseInt(monthStr, 10);
+                    if (year && month) {
+                        // Use month names array to avoid timezone issues completely
+                        const monthNames = [
+                            'January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'
+                        ];
+                        const monthName = monthNames[month - 1];
+                        const yearDisplay = year.toString().slice(-2);
+                        monthYearDisplay = `${monthName}'${yearDisplay}`;
+                    }
                 }
-                
-                if (year && month) {
-                    // Use month names array to avoid timezone issues completely
-                    const monthNames = [
-                        'January', 'February', 'March', 'April', 'May', 'June',
-                        'July', 'August', 'September', 'October', 'November', 'December'
-                    ];
-                    const monthName = monthNames[month - 1];
-                    const yearDisplay = year.toString().slice(-2);
-                    monthYearDisplay = `${monthName}'${yearDisplay}`;
-                }
-            }
-            taskItem.innerHTML = `
-                ${task.TaskNumber && task.TaskNumber.startsWith('SS-') ? `<div class="task-number">${task.TaskNumber}</div>` : ''}
-                <div class="details">
-                    <div class="task-name">${task.Task}</div>
-                    <div class="task-assigned">
-                        <div class="assigned-line">
-                            ${task.Assigned ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; padding-top: 2px;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>${task.Assigned}` : ''}
+                taskItem.innerHTML = `
+                    ${task.TaskNumber && task.TaskNumber.startsWith('SS-') ? `<div class="task-number">${task.TaskNumber}</div>` : ''}
+                    <div class="details">
+                        <div class="task-name">${task.Task}</div>
+                        <div class="task-assigned">
+                            <div class="assigned-line">
+                                ${task.Assigned ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; padding-top: 2px;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>${task.Assigned}` : ''}
+                            </div>
+                            ${monthYearDisplay ? `<div class="task-monthyear">${monthYearDisplay}</div>` : ''}
                         </div>
-                        ${monthYearDisplay ? `<div class="task-monthyear">${monthYearDisplay}</div>` : ''}
                     </div>
-                </div>
-                <div class="actions">
-                    <button class="edit-btn" data-id="${task.ID}" title="Edit Task">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2a2.828 2.828 0 0 1 4 4L7 21H3v-4L18 2z"/></svg>
-                    </button>
-                    ${loggedInRole === 'admin' ? `<button class="delete-btn" data-id="${task.ID}" title="Delete Task">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    </button>` : ''}
-                </div>
-            `;
-            let status = (task.Status || '').toLowerCase();
-            let laneId = '';
-            switch (status) {
-                case 'to do': laneId = 'lane-todo'; break;
-                case 'in progress': laneId = 'lane-inprogress'; break;
-                case 'review': laneId = 'lane-review'; break;
-                case 'hold': laneId = 'lane-hold'; break;
-                case 'done': laneId = 'lane-done'; break;
-                default: laneId = 'lane-todo'; break;
-            }
-            document.getElementById(laneId).appendChild(taskItem);
+                    <div class="actions">
+                        <button class="edit-btn" data-id="${task.ID}" title="Edit Task">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2a2.828 2.828 0 0 1 4 4L7 21H3v-4L18 2z"/></svg>
+                        </button>
+                        ${loggedInRole === 'admin' ? `<button class="delete-btn" data-id="${task.ID}" title="Delete Task">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>` : ''}
+                    </div>
+                `;
+                document.getElementById(laneId).appendChild(taskItem);
+            });
         });
         // Restore edit and delete button event listeners
         document.querySelectorAll('.edit-btn').forEach(button => {
@@ -616,16 +647,34 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set up lane drop targets
         Object.keys(laneStatusMap).forEach(laneId => {
             const lane = document.getElementById(laneId);
+            let placeholder = null;
             lane.ondragover = function(e) {
                 e.preventDefault();
                 lane.classList.add('drag-over');
+                // Find the closest task-item to the mouse position
+                const afterElement = getDragAfterElement(lane, e.clientY);
+                // Remove any existing placeholder
+                document.querySelectorAll('.drop-placeholder').forEach(el => el.remove());
+                // Create and insert placeholder
+                placeholder = document.createElement('div');
+                placeholder.className = 'drop-placeholder';
+                if (afterElement == null) {
+                    lane.appendChild(placeholder);
+                } else {
+                    lane.insertBefore(placeholder, afterElement);
+                }
             };
             lane.ondragleave = function(e) {
                 lane.classList.remove('drag-over');
+                document.querySelectorAll('.drop-placeholder').forEach(el => el.remove());
             };
             lane.ondrop = async function(e) {
                 e.preventDefault();
                 lane.classList.remove('drag-over');
+                // Remove placeholder and get its position
+                const dropPlaceholder = lane.querySelector('.drop-placeholder');
+                let insertBefore = dropPlaceholder && dropPlaceholder.nextSibling;
+                if (dropPlaceholder) dropPlaceholder.remove();
                 const taskId = e.dataTransfer.getData('text/plain');
                 const task = allTasks.find(t => t.ID === taskId);
                 if (!task) return;
@@ -642,20 +691,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 if (task.Status === newStatus) return;
-                // Move card in DOM instantly
+                // Move card in DOM instantly at drop position
                 const card = Array.from(document.querySelectorAll('.task-item')).find(el => el.querySelector('.edit-btn')?.dataset.id === taskId);
-                const oldLaneId = (() => {
-                    switch ((task.Status || '').toLowerCase()) {
-                        case 'to do': return 'lane-todo';
-                        case 'in progress': return 'lane-inprogress';
-                        case 'review': return 'lane-review';
-                        case 'hold': return 'lane-hold';
-                        case 'done': return 'lane-done';
-                        default: return 'lane-todo';
-                    }
-                })();
-                const oldLane = document.getElementById(oldLaneId);
-                lane.appendChild(card);
+                if (insertBefore) {
+                    lane.insertBefore(card, insertBefore);
+                } else {
+                    lane.appendChild(card);
+                }
                 card.classList.add('just-moved');
                 setTimeout(() => card.classList.remove('just-moved'), 400);
                 task.Status = newStatus;
@@ -663,12 +705,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     await handlePostRequest('updateTask', { ...task, Status: newStatus });
                     fetchTasks();
                 } catch (err) {
-                    if (oldLane) oldLane.appendChild(card);
-                    task.Status = laneStatusMap[oldLaneId];
                     alert('Failed to update task status.');
                 }
             };
         });
+        // Helper to find the closest element after the mouse position
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: -Infinity }).element;
+        }
     }
 
     async function handlePostRequest(action, payload) {

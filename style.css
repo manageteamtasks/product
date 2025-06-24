@@ -429,6 +429,22 @@ h1 {
     align-items: center;
 }
 
+.filter-bar-right {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.filter-total-label {
+    font-weight: 500;
+    color: #3a3a3a;
+    font-size: 0.85rem;
+    line-height: 1;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
 .refresh-btn {
     background: #fff;
     color: #6a8dff;
@@ -441,7 +457,6 @@ h1 {
     justify-content: center;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px 0 rgba(80, 110, 255, 0.07);
-    margin-left: auto;
     margin-right: 8px;
 }
 
@@ -851,4 +866,15 @@ h1 {
     background: #f9fbe7;
     color: #9e9d24;
     border: 1px solid #9e9d24;
+}
+
+.filter-total-label {
+    font-weight: 500;
+    color: #3a3a3a;
+    font-size: 0.85rem;
+    line-height: 1;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    margin-left: auto;
 } 
