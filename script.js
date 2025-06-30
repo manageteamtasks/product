@@ -408,6 +408,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentMonthYearFilter) {
             filtered = filtered.filter(task => normalizeMonthYear(task.MonthYear) === currentMonthYearFilter);
         }
+        if (!currentFilter) {
+            // If filter is 'All', exclude Sarvesh's tasks
+            filtered = filtered.filter(task => (task.Assigned || '').toLowerCase() !== 'sarvesh');
+        }
         // Lane mapping (declare only once)
         const laneStatusMap = {
             'lane-todo': 'To Do',
@@ -540,17 +544,56 @@ document.addEventListener('DOMContentLoaded', () => {
                         monthYearDisplay = `${monthName}'${yearDisplay}`;
                     }
                 }
+                // --- Days in Lane Calculation ---
+                let statusDateKey = '';
+                switch ((task.Status || '').toLowerCase()) {
+                    case 'to do': statusDateKey = 'ToDoDate'; break;
+                    case 'in progress': statusDateKey = 'InProgressDate'; break;
+                    case 'hold': statusDateKey = 'HoldDate'; break;
+                    case 'review': statusDateKey = 'ReviewDate'; break;
+                    case 'done': statusDateKey = 'DoneDate'; break;
+                    default: statusDateKey = ''; break;
+                }
+                // Debug logs
+                console.log('Task:', task);
+                console.log('Status:', task.Status, '| StatusDateKey:', statusDateKey, '| StatusDateValue:', task[statusDateKey]);
+                // Force display for debugging
+                let daysInLaneHTML = '';
+                if (statusDateKey && task[statusDateKey]) {
+                    let statusDateObj = null;
+                    const dateStr = task[statusDateKey];
+                    if (dateStr.includes('/')) {
+                        // DD/MM/YYYY
+                        const [day, month, year] = dateStr.split('/');
+                        if (day && month && year) {
+                            statusDateObj = new Date(`${year}-${month}-${day}`);
+                        }
+                    } else if (dateStr.includes('T')) {
+                        // ISO format
+                        statusDateObj = new Date(dateStr);
+                    }
+                    if (statusDateObj && !isNaN(statusDateObj)) {
+                        const today = new Date();
+                        statusDateObj.setHours(0,0,0,0);
+                        today.setHours(0,0,0,0);
+                        const diffTime = today - statusDateObj;
+                        const daysInLane = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        daysInLaneHTML = `<div class="task-daysinlane"><span title="Days in this status">🕒 ${daysInLane} day${daysInLane !== 1 ? 's' : ''}</span></div>`;
+                    }
+                }
+                // --- End Days in Lane Calculation ---
                 taskItem.innerHTML = `
-                    ${task.TaskNumber && task.TaskNumber.startsWith('SS-') ? `<div class="task-number">${task.TaskNumber}</div>` : ''}
                     <div class="details">
                         <div class="task-name">${task.Task}</div>
-                        <div class="task-assigned">
+                        <div class="assigned-days-row" style="display: flex; align-items: center; justify-content: space-between;">
                             <div class="assigned-line">
-                                ${task.Assigned ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; padding-top: 2px;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>${task.Assigned}` : ''}
+                                ${task.Assigned ? `<svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"margin-right: 4px; padding-top: 2px;\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4\"/></svg>${task.Assigned}` : ''}
                             </div>
-                            ${monthYearDisplay ? `<div class="task-monthyear">${monthYearDisplay}</div>` : ''}
+                            ${daysInLaneHTML}
                         </div>
+                        ${monthYearDisplay ? `<div class="task-monthyear">${monthYearDisplay}</div>` : ''}
                     </div>
+                    ${task.TaskNumber && task.TaskNumber.startsWith('SS-') ? `<div class="task-number">${task.TaskNumber}</div>` : ''}
                     <div class="actions">
                         <button class="edit-btn" data-id="${task.ID}" title="Edit Task">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2a2.828 2.828 0 0 1 4 4L7 21H3v-4L18 2z"/></svg>

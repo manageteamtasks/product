@@ -155,12 +155,12 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    font-weight: 500;
+    font-weight: 400;
 }
 
 .task-item .assigned-line {
-    display: flex;
-    align-items: center;
+    font-size: 0.8em;
+    font-weight: 400;
 }
 
 .task-item .task-status {
@@ -429,22 +429,6 @@ h1 {
     align-items: center;
 }
 
-.filter-bar-right {
-    display: flex;
-    align-items: center;
-    margin-left: auto;
-}
-
-.filter-total-label {
-    font-weight: 500;
-    color: #3a3a3a;
-    font-size: 0.85rem;
-    line-height: 1;
-    margin: 0;
-    display: flex;
-    align-items: center;
-}
-
 .refresh-btn {
     background: #fff;
     color: #6a8dff;
@@ -457,6 +441,7 @@ h1 {
     justify-content: center;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px 0 rgba(80, 110, 255, 0.07);
+    margin-left: auto;
     margin-right: 8px;
 }
 
@@ -876,5 +861,23 @@ h1 {
     margin: 0;
     display: flex;
     align-items: center;
-    margin-left: auto;
+}
+
+.task-daysinlane {
+    display: block !important;
+    color: #555 !important;
+    font-size: 0.8em !important;
+    font-weight: 500;
+    margin: 1px 0 0 0;
+}
+
+.task-daysinlane span {
+    color: #555 !important;
+    font-size: 0.8em !important;
+    font-weight: 500;
+    opacity: 1;
+}
+
+.task-item:hover .task-daysinlane {
+    display: none !important;
 } 
